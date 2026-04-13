@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Memoria RAM</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <svg id="svgLayer">
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#4a90e2" />
+            </marker>
+        </defs>
+        <line id="pointerArrow" x1="0" y1="0" x2="0" y2="0" stroke="#4a90e2" stroke-width="3" marker-end="url(#arrowhead)" opacity="0" style="transition: opacity 0.2s;" />
+    </svg>
+
+    <div class="container">
+        <h1>Simulador de Memoria RAM</h1>
+        <div class="info-panel">
+            Haz clic en cualquier celda para editar su valor manualmente.
+        </div>
+
+        <div class="toggle-container">
+            <label class="switch">
+                <input type="checkbox" id="hexToggle" checked>
+                <span class="slider"></span>
+            </label>
+            <span>Ver valores numéricos como Hexadecimal</span>
+        </div>
+
+        <div class="ram-grid" id="ramGrid"></div>
+
+        <div class="controls">
+            <button onclick="crearPuntero()">Puntero Simple</button>
+            <button onclick="crearVector()">Crear Vector</button>
+            <button onclick="crearString()">Crear String</button>
+            <button onclick="redimensionarEstructura()">Redimensionar</button>
+            
+            <button onclick="crearPunteroAVector()" style="grid-column: span 2;">Crear Puntero a Vector/String</button>
+            <button onclick="limpiarMemoria()" style="grid-column: span 2;">Limpiar Memoria</button>
+        </div>
+
+        <div class="log" id="logPanel">Memoria inicializada...</div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
