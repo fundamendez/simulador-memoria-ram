@@ -440,7 +440,7 @@ function calcularSizeofTotal() {
     
     let ocupados = memory.filter(c => c.type !== 'normal').length;
     document.getElementById('sizeofResult').innerText = `${ocupados} bytes usados`;
-    log(`Sizeof ejecutado: ${ocupados} bytes ocupados de ${NUM_CELLS} totales.`);
+    log(`Análisis de memoria ejecutado: ${ocupados} bytes ocupados de ${NUM_CELLS} totales.`);
 }
 
 function limpiarEstilos() {
