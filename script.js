@@ -2,7 +2,7 @@
  *  CONSTANTES Y ESTADO GLOBAL
     ========================= */
 const START_ADDR = 0x1010; // Dirección de memoria base.
-const NUM_CELLS = 16;      // Cantidad de bloques de RAM visibles.
+const NUM_CELLS = 64;      // Cantidad de bloques de RAM visibles.
 let memory = [];           // Array que representa nuestra memoria.
 let isHexMode = true;      // Estado del switch de visualización.
 let ultimoAgregadoIdx = -1; // Guarda el índice del último vector/string creado.
@@ -15,11 +15,11 @@ function initMemory() {
     ultimoAgregadoIdx = -1;
     for (let i = 0; i < NUM_CELLS; i++) {
         memory.push({
-            address: START_ADDR + (i * 4),
-            value: Math.floor(Math.random() * 255), // Basura inicial simulada.
-            type: 'normal',   // Tipos: Normal, pointer, target, vector, string.
-            dataType: 'int',  // Tipos de dato: int, char.
-            targetIndex: -1   // Usado por los punteros para saber a dónde apuntar.
+            address: START_ADDR + i, // Incrementa de 1 en 1 (1 Celda = 1 Byte).
+            value: Math.floor(Math.random() * 255), 
+            type: 'normal',   
+            dataType: 'int',  
+            targetIndex: -1   
         });
     }
     renderGrid();
@@ -156,160 +156,181 @@ function limpiarEstilos() {
     ultimoAgregadoIdx = -1;
 }
 
-function obtenerCeldaLibre(ignorarIndices = []) {
+function obtenerCeldasLibresContiguas(size, ignorarIndices = []) {
     let intentos = 0;
-    let idx;
-    do {
-        idx = Math.floor(Math.random() * NUM_CELLS);
+    while (intentos < 200) {
+        let startIdx = Math.floor(Math.random() * (NUM_CELLS - size + 1));
+        let libre = true;
+        
+        for (let i = 0; i < size; i++) {
+            if (memory[startIdx + i].type !== 'normal' || ignorarIndices.includes(startIdx + i)) {
+                libre = false;
+                break;
+            }
+        }
+        if (libre) return startIdx;
         intentos++;
-        if(intentos > 50) return Math.floor(Math.random() * NUM_CELLS);
-    } while (memory[idx].type !== 'normal' || ignorarIndices.includes(idx));
-    return idx;
+    }
+    return -1; // No encontró espacio.
 }
 
 function crearPuntero() {
     limpiarEstilos();
-    let targetIdx = obtenerCeldaLibre();
-    let pointerIdx = obtenerCeldaLibre([targetIdx]);
+    let targetIdx = obtenerCeldasLibresContiguas(4); // Target (int) ocupa 4 celdas.
+    if (targetIdx === -1) return log("Error: No hay memoria suficiente");
 
-    memory[pointerIdx].value = memory[targetIdx].address;
-    memory[pointerIdx].type = 'pointer';
-    memory[pointerIdx].targetIndex = targetIdx;
-    memory[targetIdx].type = 'target';
+    let indicesOcupados = [targetIdx, targetIdx+1, targetIdx+2, targetIdx+3];
+    let pointerIdx = obtenerCeldasLibresContiguas(4, indicesOcupados); // Puntero ocupa 4 celdas.
+    if (pointerIdx === -1) return log("Error: No hay memoria suficiente");
+
+    // Llenar datos del entero destino.
+    for(let i=0; i<4; i++) {
+        memory[targetIdx + i].type = 'target';
+        memory[targetIdx + i].dataType = 'int';
+        memory[targetIdx + i].value = (i === 0) ? Math.floor(Math.random() * 100) : 0; 
+    }
+
+    // Llenar datos del puntero.
+    for(let i=0; i<4; i++) {
+        memory[pointerIdx + i].type = 'pointer';
+        memory[pointerIdx + i].dataType = 'int';
+        memory[pointerIdx + i].targetIndex = (i === 0) ? targetIdx : -1;
+        memory[pointerIdx + i].value = (i === 0) ? memory[targetIdx].address : 0;
+    }
     
     renderGrid();
-    log(`Puntero en ${formatHex(memory[pointerIdx].address)} apunta a ${formatHex(memory[targetIdx].address)}`);
+    log(`Puntero (4 bytes) en ${formatHex(memory[pointerIdx].address)} apunta a int en ${formatHex(memory[targetIdx].address)}`);
 }
 
 function crearVector() {
     limpiarEstilos();
-    let startIdx = Math.floor(Math.random() * (NUM_CELLS - 3));
+    let bytesPerInt = 4;
+    let totalBytes = bytesPerInt * 4; // Un int[4] ocupa 16 celdas.
+    
+    let startIdx = obtenerCeldasLibresContiguas(totalBytes);
+    if (startIdx === -1) return log("Error: No hay bloques de 16 bytes libres.");
+    
     ultimoAgregadoIdx = startIdx; 
     
-    for (let i = 0; i < 4; i++) {
-        memory[startIdx + i].type = 'vector';
-        memory[startIdx + i].dataType = 'int';
-        memory[startIdx + i].value = 0; 
+    for (let i = 0; i < 4; i++) { // Por cada int.
+        for(let j = 0; j < bytesPerInt; j++) { // Por cada byte del int.
+            let idx = startIdx + (i * bytesPerInt) + j;
+            memory[idx].type = 'vector';
+            memory[idx].dataType = 'int';
+            memory[idx].value = (j === 0) ? 0 : 0; 
+        }
     }
     
     renderGrid();
-    log(`Vector int[4] creado desde ${formatHex(memory[startIdx].address)}`);
+    log(`Vector int[4] (${totalBytes} bytes) creado desde ${formatHex(memory[startIdx].address)}`);
 }
 
 function crearString() {
     limpiarEstilos();
-    let startIdx = Math.floor(Math.random() * (NUM_CELLS - 3));
+    let startIdx = obtenerCeldasLibresContiguas(5); // char[4] ocupa 4 celdas (1 byte c/u).
+    if (startIdx === -1) return log("Error: No hay memoria suficiente");
+    
     ultimoAgregadoIdx = startIdx; 
+    const palabra = ['H', 'O', 'L', 'A', '\\0'];
     
-    const palabra = ['H', 'O', 'L', '\\0'];
-    
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
         memory[startIdx + i].type = 'string';
         memory[startIdx + i].dataType = 'char';
         memory[startIdx + i].value = palabra[i];
     }
     
     renderGrid();
-    log(`String char[4] creado. Observa el \\0 en ${formatHex(memory[startIdx + 3].address)}`);
+    log(`String char[5] (5 bytes) creado. Observa el \\0 en ${formatHex(memory[startIdx + 5].address)}`);
 }
 
 function crearPunteroAVector() {
-    if (ultimoAgregadoIdx === -1) {
-        log("Error: Primero debes crear un Vector o un String.");
-        return;
-    }
+    if (ultimoAgregadoIdx === -1) return log("Error: Primero debes crear un Vector o un String.");
 
-    // Calcula la longitud de la estructura para no pisarla con el puntero.
-    let currentLen = 0;
     let structType = memory[ultimoAgregadoIdx].type;
+    let currentBytes = 0;
     for (let i = ultimoAgregadoIdx; i < NUM_CELLS; i++) {
-        if (memory[i].type === structType) currentLen++;
+        if (memory[i].type === structType) currentBytes++;
         else break;
     }
 
     let indicesOcupados = [];
-    for(let i=0; i<currentLen; i++) indicesOcupados.push(ultimoAgregadoIdx + i);
+    for(let i=0; i<currentBytes; i++) indicesOcupados.push(ultimoAgregadoIdx + i);
     
-    let pointerIdx = obtenerCeldaLibre(indicesOcupados);
+    let pointerIdx = obtenerCeldasLibresContiguas(4, indicesOcupados); // Puntero de 4 bytes.
+    if(pointerIdx === -1) return log("Error: No hay memoria suficiente");
 
-    memory[pointerIdx].value = memory[ultimoAgregadoIdx].address; 
-    memory[pointerIdx].type = 'pointer';
-    memory[pointerIdx].targetIndex = ultimoAgregadoIdx;
+    for(let i=0; i<4; i++) {
+        memory[pointerIdx + i].type = 'pointer';
+        memory[pointerIdx + i].targetIndex = (i === 0) ? ultimoAgregadoIdx : -1;
+        memory[pointerIdx + i].value = (i === 0) ? memory[ultimoAgregadoIdx].address : 0;
+    }
     
     renderGrid();
-    log(`Puntero base creado en ${formatHex(memory[pointerIdx].address)}. ¡Pasa el mouse por encima!`);
+    log(`Puntero base (4 bytes) creado en ${formatHex(memory[pointerIdx].address)}.`);
 }
 
 function redimensionarEstructura() {
-    if (ultimoAgregadoIdx === -1) {
-        log("Error: Primero debes crear un Vector o un String.");
-        return;
-    }
+    if (ultimoAgregadoIdx === -1) return log("Error: Primero debes crear un Vector o un String.");
 
     let firstCell = memory[ultimoAgregadoIdx];
     let isString = firstCell.type === 'string';
     let isVector = firstCell.type === 'vector';
-
     if (!isString && !isVector) return;
 
-    let currentLen = 0;
+    let bytesPerElement = isVector ? 4 : 1; // Ajuste crucial para realloc.
+    let currentBytes = 0;
+    
     for (let i = ultimoAgregadoIdx; i < NUM_CELLS; i++) {
-        if (memory[i].type === firstCell.type) currentLen++;
+        if (memory[i].type === firstCell.type) currentBytes++;
         else break;
     }
 
-    let newSizeStr = prompt(`El tamaño actual es ${currentLen}.\nIngresa el nuevo tamaño deseado:`, currentLen);
+    let currentLen = currentBytes / bytesPerElement;
+
+    let newSizeStr = prompt(`Tienes ${currentLen} elementos.\nIngresa la nueva cantidad deseada:`, currentLen);
     if (newSizeStr === null) return;
     
     let newSize = parseInt(newSizeStr);
-    if (isNaN(newSize) || newSize <= 0) {
-        log("Error: Debes ingresar un número mayor a 0.");
+    if (isNaN(newSize) || newSize <= 0) return log("Error: Debes ingresar un número válido.");
+
+    let newBytes = newSize * bytesPerElement;
+
+    if (ultimoAgregadoIdx + newBytes > NUM_CELLS) {
+        log("💥 Error: Segmentation Fault. Te pasaste de la RAM.");
         return;
     }
 
-    if (ultimoAgregadoIdx + newSize > NUM_CELLS) {
-        log("Error de Memoria: Segmentation Fault. Te saliste de los límites de la RAM.");
-        return;
-    }
-
-    // Reducción de memoria (free parcial).
     if (newSize < currentLen) {
-        for (let i = ultimoAgregadoIdx + newSize; i < ultimoAgregadoIdx + currentLen; i++) {
+        for (let i = ultimoAgregadoIdx + newBytes; i < ultimoAgregadoIdx + currentBytes; i++) {
             memory[i].type = 'normal';
             memory[i].dataType = 'int';
-            memory[i].value = Math.floor(Math.random() * 255); // Basura
+            memory[i].value = Math.floor(Math.random() * 255);
         }
-        if (isString) memory[ultimoAgregadoIdx + newSize - 1].value = '\\0';
-        log(`Memoria liberada. Estructura reducida a ${newSize} bloques.`);
+        if (isString) memory[ultimoAgregadoIdx + newBytes - 1].value = '\\0';
+        log(`Memoria reducida a ${newSize} elementos (${newBytes} bytes).`);
     } 
-
-    // Ampliación de memoria (realloc).
     else if (newSize > currentLen) {
         let canGrow = true;
-        for(let i = ultimoAgregadoIdx + currentLen; i < ultimoAgregadoIdx + newSize; i++) {
+        for(let i = ultimoAgregadoIdx + currentBytes; i < ultimoAgregadoIdx + newBytes; i++) {
             if (memory[i].type !== 'normal') {
-                canGrow = false;
-                break;
+                canGrow = false; break;
             }
         }
 
-        if (!canGrow) {
-            log("Error de Memoria: No hay bloques contiguos libres (Colisión de datos).");
-            return;
-        }
+        if (!canGrow) return log("💥 Error: No hay bloques de bytes contiguos libres (Colisión).");
 
-        if (isString) memory[ultimoAgregadoIdx + currentLen - 1].value = '?'; 
+        if (isString) memory[ultimoAgregadoIdx + currentBytes - 1].value = '?'; 
 
-        for (let i = ultimoAgregadoIdx + currentLen; i < ultimoAgregadoIdx + newSize; i++) {
+        for (let i = ultimoAgregadoIdx + currentBytes; i < ultimoAgregadoIdx + newBytes; i++) {
             memory[i].type = firstCell.type;
             memory[i].dataType = firstCell.dataType;
             memory[i].value = isString ? '?' : 0; 
         }
 
-        if (isString) memory[ultimoAgregadoIdx + newSize - 1].value = '\\0';
-        log(`Estructura ampliada con éxito a ${newSize} bloques contiguos.`);
+        if (isString) memory[ultimoAgregadoIdx + newBytes - 1].value = '\\0';
+        log(`Estructura ampliada a ${newSize} elementos (${newBytes} bytes).`);
     } else {
-        log("El tamaño ingresado es igual al actual.");
+        log("El tamaño es el mismo.");
     }
     
     renderGrid();

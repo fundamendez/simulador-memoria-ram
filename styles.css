@@ -52,8 +52,8 @@ h1 {
    ========================== */
 .ram-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
+    grid-template-columns: repeat(8, 1fr); /* Pasamos a 8 columnas */
+    gap: 8px; /* Achicamos el espacio entre celdas */
     margin-bottom: 30px;
     position: relative;
 }
@@ -62,31 +62,31 @@ h1 {
     background-color: var(--cell-bg);
     border: 2px solid #444;
     border-radius: var(--border-radius);
-    padding: 15px;
+    padding: 8px; /* Reducimos el padding interior */
     text-align: center;
     transition: all 0.2s ease;
     position: relative;
     cursor: text;
 }
 
-.cell:hover {
-    background-color: var(--cell-hover);
-    border-color: #666;
-}
-
 .cell .address {
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-bottom: 5px;
     pointer-events: none;
 }
 
 .cell .value {
     font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: bold;
     pointer-events: none;
+}
+
+.cell:hover {
+    background-color: var(--cell-hover);
+    border-color: #666;
 }
 
 /* ==========================
