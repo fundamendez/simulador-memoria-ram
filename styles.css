@@ -186,3 +186,50 @@ input:checked + .slider:before { transform: translateX(26px); }
     font-size: 0.8rem;
     font-style: italic;
 }
+
+/* =================================================
+   ESTILOS PARA VARIABLES INDIVIDUALES (INT Y CHAR)
+   ================================================= */
+.cell.single-int {
+    border-color: #e67e22;
+    background-color: rgba(230, 126, 34, 0.1);
+}
+
+.cell.single-char {
+    border-color: #e84393;
+    background-color: rgba(232, 67, 147, 0.1);
+}
+
+/* =================
+   DISEÑO RESPONSIVO
+   ================= */
+
+@media (max-width: 850px) {
+    .ram-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    body { padding: 10px; }
+    .container { padding: 15px; }
+    
+    .controls {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .controls button[style*="grid-column: span 2"],
+    .controls button[style*="grid-column: span 3"],
+    .sizeof-container {
+        grid-column: span 2 !important; 
+    }
+    
+    .sizeof-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .cell { padding: 5px; }
+    .cell .value { font-size: 0.9rem; }
+    .cell .address { font-size: 0.65rem; }
+}

@@ -175,6 +175,38 @@ function obtenerCeldasLibresContiguas(size, ignorarIndices = []) {
     return -1; // No encontró espacio.
 }
 
+function crearInt() {
+    limpiarEstilos();
+    let startIdx = obtenerCeldasLibresContiguas(4);
+    if (startIdx === -1) return log("Error: No hay memoria suficiente");
+    
+    ultimoAgregadoIdx = startIdx; 
+    
+    for (let i = 0; i < 4; i++) {
+        memory[startIdx + i].type = 'single-int';
+        memory[startIdx + i].dataType = 'int';
+        memory[startIdx + i].value = (i === 0) ? Math.floor(Math.random() * 100) : 0; 
+    }
+    
+    renderGrid();
+    log(`Variable int (4 bytes) creada en ${formatHex(memory[startIdx].address)}`);
+}
+
+function crearChar() {
+    limpiarEstilos();
+    let startIdx = obtenerCeldasLibresContiguas(1);
+    if (startIdx === -1) return log("Error: No hay memoria suficiente");
+    
+    ultimoAgregadoIdx = startIdx; 
+    
+    memory[startIdx].type = 'single-char';
+    memory[startIdx].dataType = 'char';
+    memory[startIdx].value = 'A';
+    
+    renderGrid();
+    log(`Variable char (1 byte) creada en ${formatHex(memory[startIdx].address)}`);
+}
+
 function crearPuntero() {
     limpiarEstilos();
     let targetIdx = obtenerCeldasLibresContiguas(4); // Target (int) ocupa 4 celdas.
@@ -244,20 +276,23 @@ function crearString() {
     log(`String char[5] (5 bytes) creado. Observa el \\0 en ${formatHex(memory[startIdx + 5].address)}`);
 }
 
-function crearPunteroAVector() {
-    if (ultimoAgregadoIdx === -1) return log("Error: Primero debes crear un Vector o un String.");
-
+function crearPunteroALast() {
+    if (ultimoAgregadoIdx === -1) return log("Error: Primero debes crear un elemento.");
     let structType = memory[ultimoAgregadoIdx].type;
     let currentBytes = 0;
+    
     for (let i = ultimoAgregadoIdx; i < NUM_CELLS; i++) {
-        if (memory[i].type === structType) currentBytes++;
-        else break;
+        if (memory[i].type === structType || memory[i].type === 'padding') {
+            currentBytes++;
+        } else {
+            break;
+        }
     }
 
     let indicesOcupados = [];
     for(let i=0; i<currentBytes; i++) indicesOcupados.push(ultimoAgregadoIdx + i);
     
-    let pointerIdx = obtenerCeldasLibresContiguas(4, indicesOcupados); // Puntero de 4 bytes.
+    let pointerIdx = obtenerCeldasLibresContiguas(4, indicesOcupados);
     if(pointerIdx === -1) return log("Error: No hay memoria suficiente");
 
     for(let i=0; i<4; i++) {
@@ -399,7 +434,15 @@ function crearStruct() {
     log(`Struct creado (${layout.length} bytes). Miembros en púrpura, padding en gris.`);
 }
 
-// Modificamos limpiarEstilos para incluir los nuevos tipos
+// Cuenta todas las celdas que no sean "normal" (basura/libres).
+// Incluye datos y también celdas de padding de los structs.
+function calcularSizeofTotal() {
+    
+    let ocupados = memory.filter(c => c.type !== 'normal').length;
+    document.getElementById('sizeofResult').innerText = `${ocupados} bytes usados`;
+    log(`Sizeof ejecutado: ${ocupados} bytes ocupados de ${NUM_CELLS} totales.`);
+}
+
 function limpiarEstilos() {
     memory.forEach(cell => {
         cell.type = 'normal';
@@ -420,3 +463,6 @@ document.getElementById('hexToggle').addEventListener('change', (e) => {
 
 // Inicializa la simulación al cargar.
 initMemory();
+
+// Asegura que la flecha se oculte al redimensionar la ventana (Evita desalineaciones).
+window.addEventListener('resize', ocultarFlecha);
