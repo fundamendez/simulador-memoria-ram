@@ -6,6 +6,7 @@ const NUM_CELLS = 64;      // Cantidad de bloques de RAM visibles.
 let memory = [];           // Array que representa nuestra memoria.
 let isHexMode = true;      // Estado del switch de visualización.
 let ultimoAgregadoIdx = -1; // Guarda el índice del último vector/string creado.
+let ultimoStructIdx = -1; // Guarda el índice del último struct creado.
 
 /** ==============
  *  INICIALIZACIÓN
@@ -334,6 +335,79 @@ function redimensionarEstructura() {
     }
     
     renderGrid();
+}
+
+function crearStruct() {
+    limpiarEstilos();
+    
+    let campos = [];
+    let continuar = true;
+    
+    // Recolección de datos (Interfaz simple por prompts).
+    while (continuar) {
+        let tipo = prompt("Tipo de campo:\n1. int\n2. char\n3. vector int\n4. vector char\n(0 para terminar)");
+        if (tipo === "0" || tipo === null) break;
+        
+        let cantidad = 1;
+        if (tipo === "3" || tipo === "4") {
+            cantidad = parseInt(prompt("Tamaño del vector:", "2"));
+        }
+        
+        campos.push({ tipo, cantidad });
+    }
+
+    if (campos.length === 0) return;
+
+    // Lógica de alineación (Padding).
+    let layout = [];
+    let maxAlign = 4; // Alineamos de a 4 bytes.
+
+    campos.forEach(campo => {
+        let alignRequired = (campo.tipo === "1" || campo.tipo === "3") ? 4 : 1;
+        let sizeElement = (campo.tipo === "1" || campo.tipo === "3") ? 4 : 1;
+        while (layout.length % alignRequired !== 0) {
+            layout.push({ type: 'padding', val: 'pad' });
+        }
+
+        for (let i = 0; i < (campo.cantidad * sizeElement); i++) {
+            layout.push({ 
+                type: 'struct-member', 
+                val: (campo.tipo === "2" || campo.tipo === "4") ? 'ch' : '00',
+                isChar: (campo.tipo === "2" || campo.tipo === "4")
+            });
+        }
+    });
+
+    // Padding final para que el struct total sea múltiplo del miembro más grande.
+    while (layout.length % maxAlign !== 0) {
+        layout.push({ type: 'padding', val: 'pad' });
+    }
+
+    let startIdx = obtenerCeldasLibresContiguas(layout.length);
+    if (startIdx === -1) return log("Error: No hay suficiente espacio contiguo para el struct.");
+
+    ultimoStructIdx = startIdx;
+    ultimoAgregadoIdx = startIdx;
+    layout.forEach((byte, i) => {
+        let cell = memory[startIdx + i];
+        cell.type = byte.type;
+        cell.value = byte.val;
+        cell.dataType = byte.isChar ? 'char' : 'int';
+    });
+
+    renderGrid();
+    log(`Struct creado (${layout.length} bytes). Miembros en púrpura, padding en gris.`);
+}
+
+// Modificamos limpiarEstilos para incluir los nuevos tipos
+function limpiarEstilos() {
+    memory.forEach(cell => {
+        cell.type = 'normal';
+        cell.dataType = 'int';
+        cell.targetIndex = -1;
+    });
+    ultimoAgregadoIdx = -1;
+    ultimoStructIdx = -1;
 }
 
 /** ===============================
