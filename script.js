@@ -209,11 +209,11 @@ function crearChar() {
 
 function crearPuntero() {
     limpiarEstilos();
-    let targetIdx = obtenerCeldasLibresContiguas(4); // Target (int) ocupa 4 celdas.
+    let targetIdx = obtenerCeldasLibresContiguas(4);
     if (targetIdx === -1) return log("Error: No hay memoria suficiente");
 
     let indicesOcupados = [targetIdx, targetIdx+1, targetIdx+2, targetIdx+3];
-    let pointerIdx = obtenerCeldasLibresContiguas(4, indicesOcupados); // Puntero ocupa 4 celdas.
+    let pointerIdx = obtenerCeldasLibresContiguas(8, indicesOcupados);
     if (pointerIdx === -1) return log("Error: No hay memoria suficiente");
 
     // Llenar datos del entero destino.
@@ -224,7 +224,7 @@ function crearPuntero() {
     }
 
     // Llenar datos del puntero.
-    for(let i=0; i<4; i++) {
+    for(let i=0; i<8; i++) {
         memory[pointerIdx + i].type = 'pointer';
         memory[pointerIdx + i].dataType = 'int';
         memory[pointerIdx + i].targetIndex = (i === 0) ? targetIdx : -1;
@@ -232,7 +232,7 @@ function crearPuntero() {
     }
     
     renderGrid();
-    log(`Puntero (4 bytes) en ${formatHex(memory[pointerIdx].address)} apunta a int en ${formatHex(memory[targetIdx].address)}`);
+    log(`Puntero (8 bytes) en ${formatHex(memory[pointerIdx].address)} apunta a int en ${formatHex(memory[targetIdx].address)}`); // CAMBIO: Mensaje actualizado a 8 bytes.
 }
 
 function crearVector() {
@@ -258,24 +258,6 @@ function crearVector() {
     log(`Vector int[4] (${totalBytes} bytes) creado desde ${formatHex(memory[startIdx].address)}`);
 }
 
-function crearString() {
-    limpiarEstilos();
-    let startIdx = obtenerCeldasLibresContiguas(5); // char[4] ocupa 4 celdas (1 byte c/u).
-    if (startIdx === -1) return log("Error: No hay memoria suficiente");
-    
-    ultimoAgregadoIdx = startIdx; 
-    const palabra = ['H', 'O', 'L', 'A', '\\0'];
-    
-    for (let i = 0; i < 5; i++) {
-        memory[startIdx + i].type = 'string';
-        memory[startIdx + i].dataType = 'char';
-        memory[startIdx + i].value = palabra[i];
-    }
-    
-    renderGrid();
-    log(`String char[5] (5 bytes) creado. Observa el \\0 en ${formatHex(memory[startIdx + 5].address)}`);
-}
-
 function crearPunteroALast() {
     if (ultimoAgregadoIdx === -1) return log("Error: Primero debes crear un elemento.");
     let structType = memory[ultimoAgregadoIdx].type;
@@ -292,17 +274,17 @@ function crearPunteroALast() {
     let indicesOcupados = [];
     for(let i=0; i<currentBytes; i++) indicesOcupados.push(ultimoAgregadoIdx + i);
     
-    let pointerIdx = obtenerCeldasLibresContiguas(4, indicesOcupados);
+    let pointerIdx = obtenerCeldasLibresContiguas(8, indicesOcupados);
     if(pointerIdx === -1) return log("Error: No hay memoria suficiente");
 
-    for(let i=0; i<4; i++) {
+    for(let i=0; i<8; i++) {
         memory[pointerIdx + i].type = 'pointer';
         memory[pointerIdx + i].targetIndex = (i === 0) ? ultimoAgregadoIdx : -1;
         memory[pointerIdx + i].value = (i === 0) ? memory[ultimoAgregadoIdx].address : 0;
     }
     
     renderGrid();
-    log(`Puntero base (4 bytes) creado en ${formatHex(memory[pointerIdx].address)}.`);
+    log(`Puntero base (8 bytes) creado en ${formatHex(memory[pointerIdx].address)}.`);
 }
 
 function redimensionarEstructura() {
